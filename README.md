@@ -90,9 +90,9 @@ The RFM analysis of the pharmacy chain’s customer base resulted in 7 customer 
 
 This can be achieved by guiding customers through the loyalty marketing funnel:
 
-- Turn "cold" customers into "warm" regulars
-- Convert "warm" customers into "hot" ones.
-- Encourage "hot" customers to make purchases and transition them into VIPs.
+- Turn "cold" customers into "warm" regulars;
+- Convert "warm" customers into "hot" ones;
+- Encourage "hot" customers to make purchases and transition them into VIPs;
 - Transform VIPs into brand ambassadors who attract their relatives and friends to the pharmacy.
 
 For more detailed recommendations, please refer to the [report](report/RFM_analysis_of_the_pharmacy_chain_customer_base.pdf)
