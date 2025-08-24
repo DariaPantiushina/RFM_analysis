@@ -40,4 +40,8 @@ The selected timeframe enables a reliable retrospective analysis and helps ensur
 
 - Created SQL queries supporting visualizations
 
-![connection_database_metabase](https://drive.google.com/uc?export=view&id=1LJYy9cx_6nov-dCp3dRjT1s3y4Iu22kl)
+![sql_queries_visualizations](https://drive.google.com/uc?export=view&id=1LJYy9cx_6nov-dCp3dRjT1s3y4Iu22kl)
+
+![visual_1](https://drive.google.com/uc?export=view&id=1lyC2_NvRWVHRooINpLM-_ISxBYY3DPyx)
+
+![visual_2](https://drive.google.com/uc?export=view&id=1nBnhDSrmobLr8xvDJV-qPVAmJX4TeXQY)
