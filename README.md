@@ -38,3 +38,6 @@ The selected timeframe enables a reliable retrospective analysis and helps ensur
 
 ![connection_database_metabase](https://drive.google.com/uc?export=view&id=1XddRX27mNSdYHdWPAO1HPHVWfDyCLMJ_)
 
+- Created SQL queries supporting visualizations
+
+![connection_database_metabase](https://drive.google.com/uc?export=view&id=1LJYy9cx_6nov-dCp3dRjT1s3y4Iu22kl)
