@@ -36,5 +36,5 @@ The selected timeframe enables a reliable retrospective analysis and helps ensur
 
 - Established connection between bonuscheques database and Metabase
 
-![connection_database_metabase](https://drive.google.com/file/d/1XddRX27mNSdYHdWPAO1HPHVWfDyCLMJ_/view?usp=sharing)
+![connection_database_metabase](https://drive.google.com/uc?export=view&id=1XddRX27mNSdYHdWPAO1HPHVWfDyCLMJ_)
 
