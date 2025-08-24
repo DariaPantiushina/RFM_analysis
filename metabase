@@ -1,1 +1,324 @@
+-- Distribution of days since last purchase
+WITH purchase_counts AS (
+    SELECT
+        card,
+        COUNT(*) AS purchases_per_customer
+    FROM bonuscheques
+    GROUP BY card
+),
+customers_multiple AS (
+    SELECT card
+    FROM purchase_counts
+    WHERE purchases_per_customer > 1
+),
+df_filtered AS (
+    SELECT *
+    FROM bonuscheques
+    WHERE 
+        card IN (SELECT card FROM customers_multiple)
+        AND card ~ '^[0-9]+$'
+),
+last_purchase AS (
+    SELECT
+        card,
+        MAX(datetime) AS last_purchase_date
+    FROM df_filtered
+    GROUP BY card
+),
+days_since_last AS (
+    SELECT
+        card,
+        DATE_PART('day', {{report_date}}::timestamp - last_purchase_date) AS days_since_last_purchase
+    FROM last_purchase
+)
+SELECT p.percentile,
+       PERCENTILE_CONT(p.percentile) WITHIN GROUP (ORDER BY d.days_since_last_purchase) AS days_without_purchase
+FROM days_since_last d,
+     (VALUES (0.1),(0.2),(0.3),(0.4),(0.5),(0.6),(0.7),(0.8),(0.9),(1.0)) p(percentile)
+GROUP BY p.percentile
+ORDER BY p.percentile;
 
+-- Distribution of the number of purchases per customer
+WITH customer_purchases AS (
+    SELECT
+	      card, 
+		  COUNT(*) AS total_purchases
+    FROM bonuscheques
+    WHERE card ~ '^[0-9]+$'
+    GROUP BY card
+    HAVING COUNT(*) > 1
+),
+percentiles AS (
+    SELECT unnest(ARRAY[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]) AS p
+)
+SELECT 
+    p AS percentile,
+    PERCENTILE_CONT(p) WITHIN GROUP (ORDER BY total_purchases) AS purchases
+FROM percentiles, customer_purchases
+GROUP BY p
+ORDER BY p;
+
+-- Distribution of total revenue per customer
+WITH purchase_counts AS (
+    SELECT
+        card,
+        COUNT(*) AS purchases_per_customer
+    FROM bonuscheques
+    GROUP BY card
+),
+customers_multiple AS (
+    SELECT card
+    FROM purchase_counts
+    WHERE purchases_per_customer > 1
+),
+df_filtered AS (
+    SELECT *
+    FROM bonuscheques
+    WHERE 
+        card IN (SELECT card FROM customers_multiple)
+        AND card ~ '^[0-9]+$'
+),
+customer_purchases AS (
+    SELECT 
+	      card, 
+		  SUM(summ) AS total_revenue
+    FROM df_filtered
+    GROUP BY card
+),
+percentiles AS (
+    SELECT unnest(ARRAY[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]) AS p
+)
+SELECT 
+    p AS percentile,
+    PERCENTILE_CONT(p) WITHIN GROUP (ORDER BY total_revenue) AS revenue
+FROM percentiles, customer_purchases
+GROUP BY p
+ORDER BY p;
+
+-- Cumulative contribution by purchase count
+WITH purchase_counts AS ( -- CTE to calculate number of purchases per customer 
+	SELECT card,
+	       COUNT(DISTINCT doc_id) AS visits_per_customer -- count unique purchase documents per card
+	FROM bonuscheques 
+	WHERE card ~ '^[0-9]+$' -- filter cards containing only digits
+	GROUP BY card -- aggregate by customer card
+),
+purchase_counts_filtered AS ( -- CTE to keep only customers with more than 1 purchase 
+	SELECT card,
+	       visits_per_customer
+	FROM purchase_counts 
+	WHERE visits_per_customer > 1 -- filter out customers with only 1 purchase
+),
+purchases_distribution AS ( -- CTE to get distribution of purchases per customer
+	SELECT
+          visits_per_customer AS total_purchases, -- rename for clarity in output
+          COUNT(*) AS customers_count -- count of customers with that number of purchases
+	FROM purchase_counts_filtered
+	GROUP BY visits_per_customer -- group by number of purchases
+),
+with_visits AS ( -- CTE to calculate total visits per purchase count
+	SELECT
+          total_purchases, -- number of purchases per customer
+          customers_count, -- number of customers with that purchase count
+          total_purchases * customers_count AS total_visits -- total visits contributed by this group
+	FROM purchases_distribution
+),
+ranked AS ( -- CTE to compute cumulative sums and totals
+	SELECT
+		  total_purchases, -- number of purchases per customer
+          customers_count, -- number of customers with that purchase count
+          total_visits, -- total visits from this group
+          SUM(customers_count) OVER (ORDER BY total_purchases) AS cum_customers, -- cumulative number of customers
+          SUM(total_visits) OVER (ORDER BY total_purchases) AS cum_visits, -- cumulative total visits
+          SUM(customers_count) OVER () AS grand_customers, -- total number of customers
+          SUM(total_visits) OVER () AS grand_visits -- total number of visits
+	FROM with_visits
+)
+SELECT
+	total_purchases, -- number of purchases per customer
+	customers_count, -- number of customers with that purchase count
+	total_visits, -- total visits from this group
+	ROUND(cum_customers * 100.0 / NULLIF(grand_customers,0), 2) AS cum_customers_percent, -- cumulative customers as % of total
+	ROUND(cum_visits * 100.0 / NULLIF(grand_visits,0), 2)       AS cum_visits_percent -- cumulative visits as % of total
+FROM ranked
+ORDER BY total_purchases; 
+
+-- Contribution of customers to revenue
+WITH purchase_counts AS (
+	SELECT
+          card,
+          COUNT(*) AS purchases_per_customer
+	FROM bonuscheques
+	GROUP BY card
+),
+customers_multiple AS (
+	SELECT
+	      card
+	FROM purchase_counts
+	WHERE purchases_per_customer > 1
+),
+df_filtered AS (
+	SELECT *
+	FROM bonuscheques
+	WHERE card IN (SELECT card FROM customers_multiple) AND card ~ '^[0-9]+$'
+),
+customer_revenue AS (
+	SELECT
+          card,
+          SUM(summ) AS total_revenue
+	FROM df_filtered
+	GROUP BY card
+),
+ranked AS (
+	SELECT
+          card,
+          total_revenue,
+          ROW_NUMBER() OVER (ORDER BY total_revenue DESC) AS rn,
+          COUNT(*) OVER () AS total_customers,
+          SUM(total_revenue) OVER () AS grand_revenue,
+          SUM(total_revenue) OVER (ORDER BY total_revenue DESC) AS cum_revenue
+	FROM customer_revenue
+),
+with_percents AS (
+	SELECT
+          card,
+          total_revenue,
+          100.0 * rn::numeric / total_customers::numeric AS cum_customers_percent,
+          100.0 * cum_revenue::numeric / grand_revenue::numeric AS cum_revenue_percent
+	FROM ranked
+),
+picked AS (
+	SELECT *
+	FROM with_percents
+	WHERE cum_customers_percent >= {{target_customers_pct}}::numeric
+	ORDER BY cum_revenue_percent
+	LIMIT 1
+)
+SELECT
+	{{target_customers_pct}}::numeric AS customers_share_percent,
+	cum_revenue_percent          AS revenue_share_percent,
+	total_revenue                AS revenue_threshold
+FROM picked;
+
+-- RFM summary table with customer categories
+WITH customers AS ( 
+	SELECT 
+	      card,
+		  MAX(datetime) AS last_purchase_date, 
+		  COUNT(DISTINCT doc_id) AS total_purchases, 
+		  SUM(summ) AS total_revenue 
+	FROM bonuscheques 
+	WHERE card ~ '^[0-9]+$' 
+	GROUP BY card 
+	HAVING COUNT(DISTINCT doc_id) > 1
+), 
+rfm AS ( 
+	SELECT
+	      card,
+		  last_purchase_date,
+		  DATE_PART('day', {{report_date}}::timestamp - last_purchase_date) AS days_since_last_purchase, 
+		  CASE
+		  	WHEN DATE_PART('day', {{report_date}}::timestamp - last_purchase_date) <= 26 THEN 1 
+		  	WHEN DATE_PART('day', {{report_date}}::timestamp - last_purchase_date) <= 84 THEN 2 
+		  	ELSE 3
+		  END AS recency_group, 
+		  total_purchases, 		  
+		  CASE
+		  	WHEN total_purchases >= 7 THEN 1 
+			WHEN total_purchases BETWEEN 3 AND 6 THEN 2 
+			WHEN total_purchases = 2 THEN 3 
+          END AS frequency_group, 
+		  total_revenue, 
+		  CASE
+		  	WHEN total_revenue >= 6381 THEN 1 
+			WHEN total_revenue BETWEEN 2164 AND 6380 THEN 2 ELSE 3 
+		  END AS monetary_group 
+	FROM customers 
+) 
+SELECT
+	  card AS client_id,
+	  last_purchase_date,
+	  days_since_last_purchase,
+	  recency_group,
+	  total_purchases,
+	  frequency_group,
+	  total_revenue,
+	  monetary_group, 
+	  CONCAT(recency_group, frequency_group, monetary_group) AS rfm_group, 
+	  CASE
+		WHEN CONCAT(recency_group, frequency_group, monetary_group) = '111' THEN 'Super Vip customers' 
+		WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('112','121','122') THEN 'Regular loyal customers' 
+		WHEN CONCAT(recency_group, frequency_group, monetary_group) = '311' THEN 'Lost high-value customers' 
+		WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('211','212','221','222','231','232') THEN 'Potential customers' 
+		WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('113','123','131','132','133','213','223') THEN 'Low-potential customers' 
+		WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('312','321','322','331','332') THEN 'Dormant potential customers' 
+		WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('233','313','323','333') THEN 'Dormant low-potential customers' 
+		ELSE 'Other' 
+		END AS logic_group 
+FROM rfm
+ORDER BY logic_group;
+
+-- RFM summary table with customer categories (final)
+WITH customers AS ( 
+	SELECT 
+	      card,
+		  MAX(datetime) AS last_purchase_date, 
+		  COUNT(DISTINCT doc_id) AS total_purchases, 
+		  SUM(summ) AS total_revenue 
+	FROM bonuscheques 
+	WHERE card ~ '^[0-9]+$' 
+	GROUP BY card 
+	HAVING COUNT(DISTINCT doc_id) > 1
+), 
+rfm AS ( 
+	SELECT
+	      card,
+		  last_purchase_date,
+		  DATE_PART('day', {{report_date}}::timestamp - last_purchase_date) AS days_since_last_purchase, 
+		  CASE
+		  	WHEN DATE_PART('day', {{report_date}}::timestamp - last_purchase_date) <= 26 THEN 1 
+		  	WHEN DATE_PART('day', {{report_date}}::timestamp - last_purchase_date) <= 84 THEN 2 
+		  	ELSE 3
+		  END AS recency_group, 
+		  total_purchases, 		  
+		  CASE
+		  	WHEN total_purchases >= 7 THEN 1 
+			WHEN total_purchases BETWEEN 3 AND 6 THEN 2 
+			WHEN total_purchases = 2 THEN 3 
+          END AS frequency_group, 
+		  total_revenue, 
+		  CASE
+		  	WHEN total_revenue >= 6381 THEN 1 
+			WHEN total_revenue BETWEEN 2164 AND 6380 THEN 2 ELSE 3 
+		  END AS monetary_group 
+	FROM customers 
+), rfm_logic AS (
+	SELECT
+		  card AS client_id,
+		  CONCAT(recency_group, frequency_group, monetary_group) AS rfm_group, 
+		  CASE
+			WHEN CONCAT(recency_group, frequency_group, monetary_group) = '111' THEN 'Super Vip customers' 
+			WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('112','121','122') THEN 'Regular loyal customers' 
+			WHEN CONCAT(recency_group, frequency_group, monetary_group) = '311' THEN 'Lost high-value customers' 
+			WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('211','212','221','222','231','232') THEN 'Potential customers' 
+			WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('113','123','131','132','133','213','223') THEN 'Low-potential customers' 
+			WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('312','321','322','331','332') THEN 'Dormant potential customers' 
+			WHEN CONCAT(recency_group, frequency_group, monetary_group) IN ('233','313','323','333') THEN 'Dormant low-potential customers' 
+			ELSE 'Other' 
+		  END AS logic_group 
+	FROM rfm
+), grouped AS (
+	SELECT
+	    logic_group,
+	    rfm_group,
+	    COUNT(*) AS customers_count
+	FROM rfm_logic
+	GROUP BY logic_group, rfm_group
+)
+SELECT
+    logic_group,
+    rfm_group,
+    customers_count,
+    SUM(customers_count) OVER (PARTITION BY logic_group) AS group_total
+FROM grouped
+ORDER BY logic_group, rfm_group;
