@@ -95,4 +95,4 @@ This can be achieved by guiding customers through the loyalty marketing funnel:
 - Encourage "hot" customers to make purchases and transition them into VIPs.
 - Transform VIPs into brand ambassadors who attract their relatives and friends to the pharmacy.
 
-For more detailed recommendations, please refer to the [report](RFM_analysis/report/RFM analysis of the pharmacy chain's  customer base.pdf)
+For more detailed recommendations, please refer to the [report](report/RFM analysis of the pharmacy chain's  customer base.pdf)
