@@ -5,8 +5,10 @@
 **The purpose of this analysis** is to recommend ways to improve the effectiveness of SMS messaging.
 
 **Objectives**:
-1. To analyze the pharmacy chain’s customer base using RFM methodology, enabling classification of customers according to purchase behavior.
-2. To provide targeted recommendations on product and service offerings for each customer segment.
+
+1. To analyze the pharmacy chain’s customer base using RFM methodology, enabling classification of customers according to purchase behavior
+   
+2. To provide targeted recommendations on product and service offerings for each customer segment
 
 ## Data
 
@@ -24,15 +26,23 @@ Additionally, customers who made only a single purchase were excluded. Since per
 
 The selected timeframe enables a reliable retrospective analysis and helps ensure that marketing efforts are not directed at customers who may no longer be reachable due to:
 
-- relocation,
+- relocation;
 
-- a change in workplace that reduces the likelihood of visiting the pharmacy, or
+- a change in workplace that reduces the likelihood of visiting the pharmacy;
 
 - updated contact information (e.g., a new phone number)
 
 ## RFM analysis: key steps and outcomes
 
-### 01 - Creating a dashboard in Metabase
+### 01 - RFM analysis metrics: segmentation thresholds
+
+Applied statistical methods in Python and PostgreSQL to define segmentation thresholds, including calculation of means, medians, percentiles, cumulative sums, and order counts.
+
+![visual_01](https://drive.google.com/uc?export=view&id=10LXJlKxl6IjyXYBvoDjQ9ITR4r12azgn)
+
+![visual_02](https://drive.google.com/uc?export=view&id=1-A_lzDY18hAFAyccDhjBU59tuIydDKkD)
+
+### 02 - Creating a dashboard in Metabase
 
 - Established connection between bonuscheques database and Metabase
 
@@ -46,10 +56,43 @@ The selected timeframe enables a reliable retrospective analysis and helps ensur
 
 ![visual_2](https://drive.google.com/uc?export=view&id=1nBnhDSrmobLr8xvDJV-qPVAmJX4TeXQY)
 
-- Developed a dashboard named RFM_analysis:[open dashboard](http://localhost:3000/public/dashboard/715600a9-2cc9-429f-b53e-4827dfde018d)
+- Developed a dashboard named RFM_analysis: [open dashboard](http://localhost:3000/public/dashboard/715600a9-2cc9-429f-b53e-4827dfde018d)
 
 ![visual_3](https://drive.google.com/uc?export=view&id=1OQV1wyjxclOayGz74sooKv_7FF27CZL2)
 
 ![visual_4](https://drive.google.com/uc?export=view&id=1lBdD7XEL1dYztDYE64kYz3q7zhvDBZH7)
 
 ![visual_5](https://drive.google.com/uc?export=view&id=1MRoBs7iTrNpoe1USXPRzChrJOVaarrxM)
+
+### 03 - RFM analysis: key recommendations and insights
+
+The RFM analysis of the pharmacy chain’s customer base resulted in 7 customer segments for targeted SMS campaigns, aimed at increasing average purchase value and purchase frequency: 
+
+1) Super VIP customers (9.01%);
+
+2) Regular loyal customers (11.23%);
+
+3) Lost high-value customers (1.45%);
+
+4) Potential customers (18.15%);
+
+5) Low-potential customers (16.05%);
+
+6) Dormant potential customers (17.9%);
+
+7) Dormant low-potential customers (26.2%)
+
+**Strategic focus**:
+
+- Increase pharmacy visit frequency;
+
+- Increase average transaction value (average check)
+
+This can be achieved by guiding customers through the loyalty marketing funnel:
+
+- Turn "cold" customers into "warm" regulars
+- Convert "warm" customers into "hot" ones.
+- Encourage "hot" customers to make purchases and transition them into VIPs.
+- Transform VIPs into brand ambassadors who attract their relatives and friends to the pharmacy.
+
+For more detailed recommendations, please refer to the [report](RFM_analysis/report/RFM analysis of the pharmacy chain's  customer base.pdf)
