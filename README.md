@@ -49,3 +49,7 @@ The selected timeframe enables a reliable retrospective analysis and helps ensur
 - Developed a dashboard named RFM_analysis
 
 ![visual_3](https://drive.google.com/uc?export=view&id=1OQV1wyjxclOayGz74sooKv_7FF27CZL2)
+
+![visual_4](https://drive.google.com/uc?export=view&id=1lBdD7XEL1dYztDYE64kYz3q7zhvDBZH7)
+
+![visual_5](https://drive.google.com/uc?export=view&id=1MRoBs7iTrNpoe1USXPRzChrJOVaarrxM)
